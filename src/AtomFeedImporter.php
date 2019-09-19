@@ -2,6 +2,8 @@
 
 namespace SeptemberWerbeagentur\ContaoAtomNewsIntegrationBundle;
 
+use DOMDocument;
+use Contao\NewsModel;
 use SeptemberWerbeagentur\ContaoAtomNewsIntegrationBundle\Model\NewsArchiveModel;
 use Psr\Log\LogLevel;
 use Contao\CoreBundle\Monolog\ContaoContext;
@@ -18,33 +20,53 @@ class AtomFeedImporter
     private function fetchAtomFeeds($atomFeedList)
     {
         $feedUrls = $this->extractFeedUrls($atomFeedList);
-        return null;
+        $atomFeeds = [];
+
+        foreach ($feedUrls as $feedId => $feedUrl) {
+            $strFeed = file_get_contents($feedUrl);
+            $atomFeeds[$feedId] = simplexml_load_string($strFeed);
+        }
+
+        return $atomFeeds;
     }
 
     private function importFeedsToContaoNews($atomFeeds)
     {
-
+        foreach ($atomFeeds as $id => $atomFeed) {
+            foreach ($atomFeed->entry as $entry) {
+                $this->saveNewsEntry($id, $entry);
+            }
+        }
     }
 
     private function extractFeedUrls($atomFeeds)
     {
         if (null == $atomFeeds) {
-            \System::getContainer()
-                ->get('monolog.logger.contao')
-                ->log(LogLevel::INFO, 'No news with atom feed found', array(
-                    'contao' => new ContaoContext(__CLASS__ . '::' . __FUNCTION__, TL_CRON)));
             return null;
         }
 
         $feedUrls = [];
-
         foreach ($atomFeeds as $atomFeed) {
-            $feedUrls[] = $atomFeed->september_atom_url;
-
-            \System::getContainer()
-                ->get('monolog.logger.contao')
-                ->log(LogLevel::INFO, 'Found feed ' . $atomFeed->title . ' with url ' . $atomFeed->september_atom_url, array(
-                    'contao' => new ContaoContext(__CLASS__ . '::' . __FUNCTION__, TL_CRON)));
+            $feedUrls[$atomFeed->id] = $atomFeed->september_atom_url;
         }
+
+        return $feedUrls;
+    }
+
+    private function saveNewsEntry($pid, $entry)
+    {
+        $objNews = NewsModel::findBy('september_atom_entry_id', (string)$entry->id);
+        if (null == $objNews) {
+            $objNews = new NewsModel();
+        }
+        $objNews->tstamp = time();
+        $objNews->date = strtotime((string)$entry->published);
+        $objNews->time = strtotime((string)$entry->published);
+        $objNews->pid = $pid;
+        $objNews->september_atom_entry_id = (string)$entry->id;
+        $objNews->headline = (string)$entry->title;
+        $objNews->teaser = (string)$entry->summary;
+
+        $objNews->save();
     }
 }
