@@ -4,6 +4,7 @@ namespace SeptemberWerbeagentur\ContaoAtomNewsIntegrationBundle;
 
 use DOMDocument;
 use Contao\NewsModel;
+use SeptemberWerbeagentur\ContaoAtomNewsIntegrationBundle\Model\ContentModel;
 use SeptemberWerbeagentur\ContaoAtomNewsIntegrationBundle\Model\NewsArchiveModel;
 use Psr\Log\LogLevel;
 use Contao\CoreBundle\Monolog\ContaoContext;
@@ -68,5 +69,19 @@ class AtomFeedImporter
         $objNews->teaser = (string)$entry->summary;
 
         $objNews->save();
+
+        $objElement = ContentModel::findOneNewsContentItem($objNews->id);
+
+        if (null == $objElement) {
+            $objElement = new ContentModel();
+        }
+        $objElement->tstamp = time();
+        $objElement->pid = $objNews->id;
+        $objElement->type = 'text';
+        $objElement->ptable = \NewsModel::getTable();
+        $objElement->heading = $objNews->headline;
+        $objElement->text = (string)$entry->content;
+
+        $objElement->save();
     }
 }
