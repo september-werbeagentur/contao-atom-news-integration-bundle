@@ -19,7 +19,7 @@ class AtomFeedImporter
 
         \System::getContainer()
             ->get('monolog.logger.contao')
-            ->log(LogLevel::INFO, count($atomFeeds) . ' Atom-Feeds gefunden', [
+            ->log(LogLevel::INFO, __CLASS__ . ': ' . count($atomFeeds) . ' atom feeds fetched', [
                 'contao' => new ContaoContext(__CLASS__.'::'.__FUNCTION__, TL_CRON)
             ]);
     }
