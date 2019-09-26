@@ -16,6 +16,12 @@ class AtomFeedImporter
     {
         $atomFeeds = $this->fetchAtomFeeds(NewsArchiveModel::findAllWithAtomFeed());
         $this->importFeedsToContaoNews($atomFeeds);
+
+        \System::getContainer()
+            ->get('monolog.logger.contao')
+            ->log(LogLevel::INFO, __CLASS__ . ': ' . count($atomFeeds) . ' atom feeds fetched', [
+                'contao' => new ContaoContext(__CLASS__.'::'.__FUNCTION__, TL_CRON)
+            ]);
     }
 
     private function fetchAtomFeeds($atomFeedList)
@@ -56,7 +62,7 @@ class AtomFeedImporter
 
     private function saveNewsEntry($pid, $entry)
     {
-        $objNews = NewsModel::findBy('september_atom_entry_id', (string)$entry->id);
+        $objNews = NewsModel::findBy('september_atom_entry_id', $pid . '-' . (string)$entry->id);
         if (null == $objNews) {
             $objNews = new NewsModel();
         }
@@ -64,7 +70,7 @@ class AtomFeedImporter
         $objNews->date = strtotime((string)$entry->published);
         $objNews->time = strtotime((string)$entry->published);
         $objNews->pid = $pid;
-        $objNews->september_atom_entry_id = (string)$entry->id;
+        $objNews->september_atom_entry_id = $pid . '-' . (string)$entry->id;
         $objNews->headline = (string)$entry->title;
         $objNews->teaser = (string)$entry->summary;
 
